@@ -26,13 +26,13 @@ def get_steering_input():
 
 def get_throttle_input():
     throttle = joystick.get_axis(1)
-    print(f"Throttle: {throttle: .2f}")
-    return min(throttle, 0.5)  # Axis 1 for throttle (forward/backward)
+    print(f"Throttle: {min(0.0, -throttle): .2f}")
+    return max(0.0, -throttle*0.5)  # Axis 1 for throttle (forward/backward)
 
 def get_brake_input():
     brake = joystick.get_axis(2)
-    print(f"Brake: {brake: .2f}")
-    return max(0.0, brake)  # Axis 2 for brake (left-right)
+    print(f"Brake: {max(0.0, -brake): .2f}")
+    return max(0.0, -brake)  # Axis 2 for brake (left-right)
 
 def get_gear_input(vehicle):
     control.manual_gear_shift = True

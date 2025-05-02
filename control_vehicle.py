@@ -85,7 +85,7 @@ def main():
     vehicle = world.spawn_actor(vehicle_bp, spawn_point)
 
     CAMERA_POS_Z = 3
-    CAMERA_POS_X = 0
+    CAMERA_POS_X = -5
     camera_init_trans = carla.Transform(carla.Location(z = CAMERA_POS_Z, x = CAMERA_POS_X))
 
     camera_bp = bp_lib.find('sensor.camera.rgb')

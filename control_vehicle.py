@@ -12,7 +12,7 @@ import matplotlib
 # Initialize pygame and joystick
 pygame.init()
 pygame.joystick.init()
-control = carla.VehicleControl()
+
 
 # Ensure that there is at least one joystick (G29 in this case)
 if pygame.joystick.get_count() == 0:
@@ -37,15 +37,12 @@ def get_brake_input():
     #print(f"Brake: {max(0.0, -brake): .2f}")
     return max(0.0, -brake)  # Axis 2 for brake (left-right)
 
-
-
-
 # Connect to CARLA
 def connect_to_carla():
     try:
         client = carla.Client('localhost', 2000)
-        world = client.get_world()
-        #world = client.load_world('Town01')
+        #world = client.get_world()
+        world = client.load_world('Town01')
         logging.info("Successfully connected to CARLA.")
         return world
     except carla.ClientError as e:
@@ -59,14 +56,11 @@ def control_vehicle(vehicle, steering, throttle, brake):
     control.throttle = throttle  # Throttle value between 0 (no throttle) and 1 (full throttle)
     control.brake = brake  # Brake value between 0 (no brake) and 1 (full brake)
     
-    # Ensure vehicle is in drive gear before moving
+    # Ensure vehicle is in drive gear before moving 
     if vehicle.get_control().gear != 1:  # Gear 1 is Drive mode
         control.gear = 1  # Set the gear to Drive mode
     
     vehicle.apply_control(control)
-
-def camera_callback(image, data_dict):
-    data_dict['image'] = np.reshape(np.copy(image.raw_data), (image.height, image.width, 4))
 
 # Main function
 def main():

@@ -8,6 +8,8 @@ import open3d as o3d
 from matplotlib import cm
 import math
 import matplotlib
+import keyboard
+
 
 # Initialize pygame and joystick
 pygame.init()
@@ -31,18 +33,20 @@ def get_throttle_input():
     throttle = joystick.get_axis(1)
     #print(f"Throttle: {min(0.0, -throttle): .2f}")
     return max(0.0, -throttle)  # Axis 1 for throttle (forward/backward)
-
+    
 def get_brake_input():
     brake = joystick.get_axis(2)
     #print(f"Brake: {max(0.0, -brake): .2f}")
     return max(0.0, -brake)  # Axis 2 for brake (left-right)
 
+
+
 # Connect to CARLA
 def connect_to_carla():
     try:
         client = carla.Client('localhost', 2000)
-        #world = client.get_world()
-        world = client.load_world('Town01')
+        world = client.get_world()
+        #world = client.load_world('Town01')
         logging.info("Successfully connected to CARLA.")
         return world
     except carla.ClientError as e:
@@ -175,15 +179,15 @@ def main():
     vis.get_render_option().show_coordinate_frame = True
     add_open3d_axis(vis)
     frame = 0
+    acc = False
     # Step 4: Start the game loop and handle input
     try:
         while True:
             pygame.event.pump()  # Process any pygame events (important for joystick)
-
             # Step 5: Read G29 inputs
             steering = get_steering_input()
-            throttle = get_throttle_input()
             brake = get_brake_input()
+            throttle = get_throttle_input()
            
             # Step 6: Apply the controls to the vehicle
             control_vehicle(vehicle, steering, throttle, brake)

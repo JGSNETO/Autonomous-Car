@@ -10,6 +10,19 @@ import math
 import matplotlib
 import argparse
 
+class SensorManager:
+    def __init__(self, world, vehicle, camera_pos_x, camera_pos_z):
+        self.world = world
+        self.camera_pos_x = camera_pos_x
+        self.camera_pos_z = camera_pos_z
+        self.vehicle = vehicle
+    def _spawn_rgb_camera(self):
+        bp_lib = self.world.get_blueprint_library()
+        camera_init_trans = carla.Transform(carla.Location(z = self.camera_pos_z, x = self.camera_pos_x))
+        camera_bp = bp_lib.find('sensor.camera.rgb')
+        camera = self.world.spawn_actor(camera_bp, camera_init_trans, attach_to=self.vehicle)
+        return True
+
 class JoystickHandler:
     def __init__(self):
         pygame.init()
@@ -48,15 +61,23 @@ class VehicleManager:
         bp_lib = self.world.get_blueprint_library()
         vehicle_bp = bp_lib.find(blueprint_id)
         spawn_point = self.world.get_map().get_spawn_points()[0]
+        # current_lights = carla.VehicleLightState.NONE
+        # current_lights |= carla.VehicleLightState.Brake
+        # self.vehicle.set_light_state(current_lights)
         return self.world.spawn_actor(vehicle_bp, spawn_point)
     
     def apply_control(self, throttle: float, steer: float, brake: float):
-       
         control = carla.VehicleControl(throttle=throttle, steer=steer, brake=brake)
          # Ensure vehicle is in drive gear before moving 
         if self.vehicle.get_control().gear != 1:  # Gear 1 is Drive mode
             control.gear = 1  # Set the gear to Drive mode
         self.vehicle.apply_control(control)
+
+    def brake_lights(self):
+        current_lights = carla.VehicleLightState.NONE
+        current_lights |= carla.VehicleLightState.Brake
+        self.vehicle.set_light_state(current_lights)
+
 
 def game_loop(args):
     pygame.init()
@@ -69,6 +90,7 @@ def game_loop(args):
         client.set_timeout(2000.0)
         sim_world = client.get_world()
         vehicle = VehicleManager(sim_world)
+        rgb = SensorManager(sim_world, vehicle, 3, -5)
 
         while True:
             pygame.event.pump()
@@ -76,6 +98,7 @@ def game_loop(args):
             steering = Joystick_handler.get_steering_input()
             throttle = Joystick_handler.get_throttle_input()
             brake = Joystick_handler.get_brake_input()
+            vehicle.brake_lights()
             vehicle.apply_control(throttle, steering, brake)
     
     except KeyboardInterrupt:

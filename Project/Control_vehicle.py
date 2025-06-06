@@ -24,9 +24,10 @@ class SensorManager:
         return True
 
 class JoystickHandler:
-    def __init__(self):
+    def __init__(self, vehicle):
         pygame.init()
         pygame.joystick.init()
+        self.vehicle = vehicle
 
         if pygame.joystick.get_count() == 0:
             logging.error("No joystick detected.")
@@ -47,25 +48,39 @@ class JoystickHandler:
             return max(0.0, -self.joystick.get_axis(1))  # Throttle axis
         return 0.0
 
-    def get_brake_input(self) -> float:
+    def get_brake_input(self, vehicle) -> float:
         if self.joystick:
-            return max(0.0, -self.joystick.get_axis(2))  # Brake axis
+            #return max(0.0, -self.joystick.get_axis(2))
+            if max(0.0, -self.joystick.get_axis(2)) > 0.1:
+                self.vehicle.enable_brake_lights(True)
+                print(f"Brake: {max(0.0, -self.joystick.get_axis(2))}")
+                return max(0.0, -self.joystick.get_axis(2))  # Brake axis
+            else:
+                self.vehicle.enable_brake_lights(False)
+                return max(0.0, -self.joystick.get_axis(2))  # Brake axis
         return 0.0
 
 class VehicleManager:
     def __init__(self, world, vehicle_blueprint: str = "vehicle.tesla.model3"):
         self.world = world
         self.vehicle = self._spawn_vehicle(vehicle_blueprint)
+        self.light_state = carla.VehicleLightState.NONE
 
     def _spawn_vehicle(self, blueprint_id):
         bp_lib = self.world.get_blueprint_library()
         vehicle_bp = bp_lib.find(blueprint_id)
         spawn_point = self.world.get_map().get_spawn_points()[0]
-        # current_lights = carla.VehicleLightState.NONE
-        # current_lights |= carla.VehicleLightState.Brake
-        # self.vehicle.set_light_state(current_lights)
         return self.world.spawn_actor(vehicle_bp, spawn_point)
     
+    def enable_brake_lights(self, light_state):
+        # Set the light state to include the Brake light
+        if light_state == True:
+            self.light_state = carla.VehicleLightState.Brake
+        else:
+            self.light_state = carla.VehicleLightState.NONE
+        self.vehicle.set_light_state(carla.VehicleLightState(self.light_state))
+    
+
     def apply_control(self, throttle: float, steer: float, brake: float):
         control = carla.VehicleControl(throttle=throttle, steer=steer, brake=brake)
          # Ensure vehicle is in drive gear before moving 
@@ -73,16 +88,12 @@ class VehicleManager:
             control.gear = 1  # Set the gear to Drive mode
         self.vehicle.apply_control(control)
 
-    def brake_lights(self):
-        current_lights = carla.VehicleLightState.NONE
-        current_lights |= carla.VehicleLightState.Brake
-        self.vehicle.set_light_state(current_lights)
 
 
 def game_loop(args):
     pygame.init()
     world = None
-    Joystick_handler = JoystickHandler()
+    
     
     try:
         #client = carla.Client(args.host, args.port)
@@ -90,6 +101,7 @@ def game_loop(args):
         client.set_timeout(2000.0)
         sim_world = client.get_world()
         vehicle = VehicleManager(sim_world)
+        Joystick_handler = JoystickHandler(vehicle)
         rgb = SensorManager(sim_world, vehicle, 3, -5)
 
         while True:
@@ -97,9 +109,15 @@ def game_loop(args):
             # Step 5: Read G29 inputs
             steering = Joystick_handler.get_steering_input()
             throttle = Joystick_handler.get_throttle_input()
-            brake = Joystick_handler.get_brake_input()
-            vehicle.brake_lights()
+            brake = Joystick_handler.get_brake_input(vehicle)
+            # if brake > 0.1:
+            #     vehicle.enable_brake_lights(True)
+            # else:
+            #     vehicle.enable_brake_lights(False)
             vehicle.apply_control(throttle, steering, brake)
+            sim_world.tick()
+            # Small sleep to match real-time speed (optional)
+            time.sleep(0.05)
     
     except KeyboardInterrupt:
         logging.info("Simulation ended.")

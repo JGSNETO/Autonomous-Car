@@ -10,18 +10,51 @@ import math
 import matplotlib
 import argparse
 
+import numpy as np
+import carla
+
 class SensorManager:
-    def __init__(self, world, vehicle, camera_pos_x, camera_pos_z):
+    def __init__(self, world, vehicle, camera_pos_x=0, camera_pos_z=3, image_width=650, image_height=360):
         self.world = world
+        self.vehicle = vehicle
         self.camera_pos_x = camera_pos_x
         self.camera_pos_z = camera_pos_z
-        self.vehicle = vehicle
+        self.image_width = image_width
+        self.image_height = image_height
+
+        self.camera_data = {'image': np.zeros((self.image_height, self.image_width, 4), dtype=np.uint8)}
+
+        self.camera = self._spawn_rgb_camera()
+        self._listen_to_camera()
+        
     def _spawn_rgb_camera(self):
         bp_lib = self.world.get_blueprint_library()
-        camera_init_trans = carla.Transform(carla.Location(z = self.camera_pos_z, x = self.camera_pos_x))
         camera_bp = bp_lib.find('sensor.camera.rgb')
-        camera = self.world.spawn_actor(camera_bp, camera_init_trans, attach_to=self.vehicle)
-        return True
+        camera_bp.set_attribute('image_size_x', str(self.image_width))
+        camera_bp.set_attribute('image_size_y', str(self.image_height))
+
+        camera_init_trans = carla.Transform(carla.Location(z=self.camera_pos_z, x=self.camera_pos_x))
+
+        # Pass attach_to as positional argument
+        return self.world.spawn_actor(
+            camera_bp,
+            camera_init_trans,
+            self.vehicle,  # positional attach_to
+            attachment_type=carla.AttachmentType.Rigid  # keyword argument
+        )
+    
+    def _listen_to_camera(self):
+        self.camera.listen(lambda image: self._camera_callback(image))
+    
+    def _camera_callback(self, image):
+        self.camera_data['image'] = np.reshape(
+            np.copy(image.raw_data),
+            (image.height, image.width, 4)
+        )
+    
+    def get_image(self):
+        return self.camera_data['image']
+
 
 class JoystickHandler:
     def __init__(self, vehicle):
@@ -69,7 +102,7 @@ class VehicleManager:
     def _spawn_vehicle(self, blueprint_id):
         bp_lib = self.world.get_blueprint_library()
         vehicle_bp = bp_lib.find(blueprint_id)
-        spawn_point = self.world.get_map().get_spawn_points()[0]
+        spawn_point = self.world.get_map().get_spawn_points()[3]
         return self.world.spawn_actor(vehicle_bp, spawn_point)
     
     def enable_brake_lights(self, light_state):
@@ -92,9 +125,8 @@ class VehicleManager:
 
 def game_loop(args):
     pygame.init()
-    world = None
-    
-    
+
+
     try:
         #client = carla.Client(args.host, args.port)
         client = carla.Client('localhost', 2000)
@@ -102,7 +134,7 @@ def game_loop(args):
         sim_world = client.get_world()
         vehicle = VehicleManager(sim_world)
         Joystick_handler = JoystickHandler(vehicle)
-        rgb = SensorManager(sim_world, vehicle, 3, -5)
+        sensor_manager = SensorManager(sim_world, vehicle.vehicle, -5, 2)
 
         while True:
             pygame.event.pump()
@@ -110,14 +142,21 @@ def game_loop(args):
             steering = Joystick_handler.get_steering_input()
             throttle = Joystick_handler.get_throttle_input()
             brake = Joystick_handler.get_brake_input(vehicle)
-            # if brake > 0.1:
-            #     vehicle.enable_brake_lights(True)
-            # else:
-            #     vehicle.enable_brake_lights(False)
             vehicle.apply_control(throttle, steering, brake)
             sim_world.tick()
             # Small sleep to match real-time speed (optional)
             time.sleep(0.05)
+
+            if cv2.waitKey(1) == ord('q'):
+                break
+
+            image = sensor_manager.get_image()
+            cv2.imshow('Camera feed', image)
+        cv2.destroyAllWindows()
+        for actor in sim_world.get_actors().filter('*vehicle*'):
+            actor.destroy()
+        for sensor in sim_world.get_actors().filter('*sensor*'):
+            sensor.destroy()
     
     except KeyboardInterrupt:
         logging.info("Simulation ended.")

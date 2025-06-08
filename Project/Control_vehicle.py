@@ -9,7 +9,6 @@ from matplotlib import cm
 import math
 import matplotlib
 import argparse
-
 import numpy as np
 import carla
 
@@ -113,7 +112,6 @@ class VehicleManager:
             self.light_state = carla.VehicleLightState.NONE
         self.vehicle.set_light_state(carla.VehicleLightState(self.light_state))
     
-
     def apply_control(self, throttle: float, steer: float, brake: float):
         control = carla.VehicleControl(throttle=throttle, steer=steer, brake=brake)
          # Ensure vehicle is in drive gear before moving 
@@ -125,7 +123,6 @@ class VehicleManager:
 
 def game_loop(args):
     pygame.init()
-
 
     try:
         #client = carla.Client(args.host, args.port)

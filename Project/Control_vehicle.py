@@ -179,7 +179,6 @@ class JoystickHandler:
             #return max(0.0, -self.joystick.get_axis(2))
             if max(0.0, -self.joystick.get_axis(2)) > 0.1:
                 self.vehicle.enable_brake_lights(True)
-                print(f"Brake: {max(0.0, -self.joystick.get_axis(2))}")
                 return max(0.0, -self.joystick.get_axis(2))  # Brake axis
             else:
                 self.vehicle.enable_brake_lights(False)
@@ -237,6 +236,7 @@ def game_loop(args):
             brake = Joystick_handler.get_brake_input(vehicle)
             vehicle.apply_control(throttle, steering, brake)
             sim_world.tick()
+            frame += 1
             # Small sleep to match real-time speed (optional)
             time.sleep(0.05)
 

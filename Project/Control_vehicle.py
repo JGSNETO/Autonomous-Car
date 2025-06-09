@@ -44,7 +44,8 @@ class SensorManager:
         # Spawn LIDAR sensor
         self.lidar = self._spawn_lidar()
         self._listen_to_lidar()
-
+    
+    #--------------------Camera--------------------
     def _spawn_rgb_camera(self):
         bp_lib = self.world.get_blueprint_library()
         camera_bp = bp_lib.find('sensor.camera.rgb')
@@ -60,8 +61,6 @@ class SensorManager:
             self.vehicle,  # positional attach_to
             attachment_type=carla.AttachmentType.Rigid  # keyword argument
         )
-    
-    #--------------------Camera--------------------
     
     def _listen_to_camera(self):
         self.camera.listen(lambda image: self._camera_callback(image))

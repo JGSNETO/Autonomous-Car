@@ -85,13 +85,14 @@ Parses command-line arguments and starts the simulation via `game_loop`.
 
 ## ▶️ To Run the Script
 ```bash
-python your_script.py
+# Terminal 1: Start the CARLA simulator
+./CarlaUE4.sh
+```
+```bash
+# Terminal 2: Start your Python script that connects to CARLA
+python Autonomous-Car/Project/Control_vehicle.py --sync --verbose
 ```
 
-Optionally use:
-```bash
-python your_script.py --sync --verbose
-```
 
 ---
 

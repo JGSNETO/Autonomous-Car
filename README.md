@@ -1,108 +1,100 @@
-# CARLA Joystick-Controlled Vehicle with RGB, Depth, and LiDAR Visualization
+# CARLA Manual Control Simulation with Sensor Visualization
 
-This project connects to the CARLA simulator, spawns a Tesla Model 3, and allows real-time driving control using a Logitech G29 racing wheel. It visualizes camera and LiDAR data live using OpenCV and Open3D.
-
----
-
-## Features
-
-- Connects to CARLA server (`localhost:2000`)
-- Loads `Town01` map
-- Spawns Tesla Model 3
-- Attaches RGB camera, depth camera, and LiDAR sensors
-- Reads Logitech G29 inputs (steering, throttle, brake)
-- Displays:
-    - RGB camera in OpenCV window
-    - Depth camera in OpenCV window
-    - LiDAR point cloud in Open3D window
+This script implements a manual control simulation for the CARLA simulator using a physical joystick (e.g., Logitech G29). It includes visualization for both RGB camera and LiDAR data using OpenCV and Open3D.
 
 ---
 
-# Requirements
-
-- Python 3.8
-- CARLA Python API
-- pygame
-- numpy
-- opencv-python
-- open3d
-- matplotlib
-
-## Install dependencies:
-pip install pygame numpy opencv-python open3d matplotlib
-
+## 📦 Required Modules
+- `pygame`: Joystick input handling
+- `carla`: CARLA simulator client API
+- `open3d`: Real-time 3D visualization of LiDAR data
+- `cv2 (OpenCV)`: Display of RGB camera feed
+- `numpy`: Matrix and array operations
+- `matplotlib`: Color mapping for LiDAR intensities
 
 ---
 
-## How to Run
+## 🧱 Main Components
 
-1. Start the CARLA simulator: ./CarlaUE4.sh
+### `SensorManager`
+Manages RGB camera and LiDAR sensors.
 
-2. Run the script: python control_vehicle.py
+#### Constructor:
+```python
+SensorManager(world, vehicle, camera_pos_x=0, camera_pos_z=3, image_width=650, image_height=360, lidar_pos_x=0, lidar_pos_z=3)
+```
 
-
-3. Control the car using the Logitech G29 wheel.
-
-4. Press `q` in the OpenCV windows to quit.
-
----
-
-## Controls (G29 Joystick)
-
-| Control    | Axis/Action       |
-|------------|-------------------|
-| Steering   | Axis 0            |
-| Throttle   | Axis 1 (negative) |
-| Brake      | Axis 2 (negative) |
-
----
-
-## Code Overview
-
-This script:
-
-- Initializes pygame for joystick input.
-- Connects to CARLA (`localhost:2000`) and loads `Town01`.
-- Spawns a Tesla Model 3.
-- Attaches:
-    - RGB camera (`sensor.camera.rgb`)
-    - Depth camera (`sensor.camera.depth`)
-    - LiDAR (`sensor.lidar.ray_cast`)
-- Reads real-time inputs from the Logitech G29:
-    - Axis 0 → Steering
-    - Axis 1 → Throttle (inverted)
-    - Axis 2 → Brake (inverted)
-- Displays:
-    - Camera feeds (OpenCV windows)
-    - LiDAR point cloud (Open3D visualizer)
-- Cleans up actors and windows on exit.
+#### Key Methods:
+- `_spawn_rgb_camera()`: Spawns the RGB camera sensor
+- `_listen_to_camera()`: Sets up callback for camera images
+- `_camera_callback(image)`: Stores incoming image data
+- `get_image()`: Returns the current camera frame
+- `_spawn_lidar()`: Spawns the LiDAR sensor with specified attributes
+- `_listen_to_lidar()`: Sets up callback for LiDAR point clouds
+- `_lidar_callback(data)`: Processes LiDAR point cloud and assigns color based on intensity
+- `_setup_open3d_visualizer()`: Creates Open3D visualizer window
+- `_add_open3d_axis()`: Adds coordinate axis to the visualizer
+- `update_visualizations()`: Refreshes the visualizer with new point cloud data
 
 ---
 
-## Main Functions
+### `JoystickHandler`
+Interfaces with a joystick device for manual driving control.
 
-- **connect_to_carla()**: Connects to CARLA server and loads the map.
-- **control_vehicle()**: Applies steering, throttle, and brake inputs to the vehicle.
-- **camera_callback()**: Processes RGB camera data.
-- **depth_callback()**: Processes depth camera data.
-- **lidar_callback()**: Processes LiDAR point cloud data.
+#### Constructor:
+```python
+JoystickHandler(vehicle)
+```
 
----
-
-## Cleanup
-
-On exit (`q` or interrupt):
-- Stops and destroys all sensors.
-- Destroys the vehicle actor.
-- Closes OpenCV and Open3D windows.
+#### Key Methods:
+- `get_steering_input()`: Returns steering axis value
+- `get_throttle_input()`: Returns throttle axis value
+- `get_brake_input(vehicle)`: Returns brake value and updates brake light
 
 ---
 
-## Notes
+### `VehicleManager`
+Spawns and controls a vehicle actor in CARLA.
 
-✅ Make sure the CARLA server is running before executing the script.  
-✅ Adjust the map (`Town01`) or vehicle blueprint (`vehicle.tesla.model3`) if needed.  
-✅ Ensure the G29 wheel is properly connected and detected by pygame.
+#### Constructor:
+```python
+VehicleManager(world, vehicle_blueprint='vehicle.tesla.model3')
+```
 
+#### Key Methods:
+- `_spawn_vehicle(blueprint_id)`: Spawns the vehicle at a spawn point
+- `enable_brake_lights(state)`: Enables or disables brake lights
+- `apply_control(throttle, steer, brake)`: Applies manual driving input to the vehicle
 
+---
 
+## 🎮 `game_loop(args)`
+Main execution loop:
+- Connects to CARLA server
+- Spawns vehicle and attaches sensors
+- Reads joystick input for throttle, steering, and brake
+- Updates vehicle control and sensor visualizations in real-time
+- Press **Q** to exit the simulation
+
+---
+
+## 🏁 `main()`
+Parses command-line arguments and starts the simulation via `game_loop`.
+
+---
+
+## ▶️ To Run the Script
+```bash
+python your_script.py
+```
+
+Optionally use:
+```bash
+python your_script.py --sync --verbose
+```
+
+---
+
+## 🧹 Cleanup
+- All actors are destroyed on shutdown
+- Visualization windows are closed properly
